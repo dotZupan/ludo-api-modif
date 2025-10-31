@@ -15,8 +15,10 @@ namespace LudoApi.Services
 
         Turn GetTurn(IPlayer player);
 
-        void Advance(IPlayer player, int piece);
+        AdvanceResult Advance(IPlayer player, int piece);
 
         bool HasWon(IPlayer player);
+
+        IEnumerable<PossibleMove> GetPossibleMoves(Player player, int dieRoll);
     }
 }

@@ -24,6 +24,7 @@ namespace LudoApi
                         builder.AllowAnyMethod()
                                .AllowAnyHeader()
                                .WithOrigins(
+                                    "http://localhost:5000", 
                                    "http://localhost:8080",
                                    "https://localhost:8080",
                                    "https://better-ludo.netlify.com")

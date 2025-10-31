@@ -28,7 +28,7 @@ namespace LudoApi.Hubs
         #region lobby
 
         [HubMethodName("lobby:create")]
-        public async Task CreateLobby(string lobbyName)
+        public async Task CreateLobby(string lobbyName, string playerName)
         {
             var joinedLobby = _lobbyService.GetJoinedLobby(Context.ConnectionId);
             if (joinedLobby != null)
@@ -42,31 +42,34 @@ namespace LudoApi.Hubs
             }
 
             _lobbyService.CreateLobby(lobbyName, Context.ConnectionId);
-            await JoinLobby(lobbyName);
+            await JoinLobby(lobbyName, playerName);
         }
 
         [HubMethodName("lobby:ready")]
         public async Task ReadyPlayer(bool ready)
         {
+            Console.WriteLine($"ReadyPlayer called: {Context.ConnectionId}");
+
             var lobby = _lobbyService.GetJoinedLobby(Context.ConnectionId);
             if (lobby == null)
             {
                 throw new HubException("You are not in a lobby");
             }
 
-            var player = lobby.Game.GetPlayer(Context.ConnectionId);
+            var player = lobby.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
             if (player == null)
             {
-                throw new HubException("Player is not in lobby");
+                throw new HubException(" HhPlayer is not in lobby");
             }
             player.IsReady = ready;
 
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-ready", Context.ConnectionId);
+            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-ready", Context.ConnectionId, player.Name);
         }
 
         [HubMethodName("lobby:join")]
-        public async Task JoinLobby(string lobbyName)
+        public async Task JoinLobby(string lobbyName, string playerName = "Player")
         {
+            Console.WriteLine($"JoinLobby called: {Context.ConnectionId}");
             var joinedLobby = _lobbyService.GetJoinedLobby(Context.ConnectionId);
             if (joinedLobby != null)
             {
@@ -85,10 +88,10 @@ namespace LudoApi.Hubs
                 throw new HubException("Lobby is full");
             }
 
-            lobby.AddPlayer(Context.ConnectionId, (Color)(playerCount + 1));
+            lobby.AddPlayer(Context.ConnectionId, (Color)(playerCount + 1), playerName);
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby-{lobby.Id}", Context.ConnectionAborted);
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-join", Context.ConnectionId);
+            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-join", Context.ConnectionId, playerName);
         }
 
         [HubMethodName("lobby:leave")]
@@ -100,16 +103,26 @@ namespace LudoApi.Hubs
                 throw new HubException("Player is not in a lobby");
             }
 
+            // Get the player object before removing
+            var player = lobby.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+            string playerName = player?.Name ?? Context.ConnectionId;
+
+            // Remove the player from the lobby
             lobby.RemovePlayer(Context.ConnectionId);
 
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-leave", Context.ConnectionId);
+            // Notify other clients using the friendly name
+            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-leave", playerName);
+
+            // Remove from SignalR group
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"lobby-{lobby.Id}");
 
+            // Destroy lobby if empty
             if (!lobby.Players.Any())
             {
                 _lobbyService.DestroyLobby(lobby.Id);
             }
         }
+
 
         [HubMethodName("lobby:get-lobbies")]
         public IEnumerable GetLobbies()
@@ -124,17 +137,18 @@ namespace LudoApi.Hubs
         }
 
         [HubMethodName("lobby:get-players")]
-        public IEnumerable GetPlayers(string lobbyName)
-        {
-            var lobby = _lobbyService.GetLobby(lobbyName);
-            if (lobby == null)
-            {
-                throw new HubException($"Lobby '{lobbyName}' does not exist");
-            }
+public async Task GetPlayers(string lobbyName)
+{
+    var lobby = _lobbyService.GetLobby(lobbyName);
+    if (lobby == null)
+        throw new HubException($"Lobby '{lobbyName}' does not exist");
 
-            return lobby.Players;
-        }
+    // Extract player names from the lobby
+    var playerNames = lobby.Players.Select(p => p.Name).ToList();
 
+    // Send the list of names to the caller
+    await Clients.Caller.SendAsync("lobby:players", playerNames);
+}
         #endregion
 
         #region game
@@ -148,9 +162,9 @@ namespace LudoApi.Hubs
                 throw new HubException("You're not in a lobby");
             }
 
-            if (Context.ConnectionId == lobby.Admin)
+            if (Context.ConnectionId != lobby.Admin)
             {
-                throw new HubException("Only an admin can start the game");
+                throw new HubException($"Only an admin can start the game {lobby.Admin}, you are {Context.ConnectionId}");
             }
 
             if (lobby.Players.Any(p => !p.IsReady))
@@ -161,6 +175,8 @@ namespace LudoApi.Hubs
             lobby.Game.StartGame(lobby.Players);
 
             await Clients.Group($"lobby-{lobby.Id}").SendAsync("game:started");
+            Console.WriteLine($"Game started");
+
         }
 
         [HubMethodName("game:roll-die")]
@@ -184,44 +200,80 @@ namespace LudoApi.Hubs
             }
 
             var dieRoll = lobby.Game.RollDie(player);
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("game:die-roll", player.ConnectionId, dieRoll);
+            Console.WriteLine($"Player {player.ConnectionId} rolled a {dieRoll}");
+            var possibleMoves = lobby.Game.GetPossibleMoves((Player)player, dieRoll);
+            await Clients.Group($"lobby-{lobby.Id}").SendAsync("game:die-roll", player.ConnectionId, player.Name, dieRoll, possibleMoves);
 
             await NextTurn(lobby.Game, lobby);
         }
 
-        [HubMethodName("game:advance")]
-        public async Task Advance(int piece)
-        {
-            var lobby = _lobbyService.GetJoinedLobby(Context.ConnectionId);
-            if (lobby == null)
-            {
-                throw new HubException("You're not in a lobby");
-            }
+       [HubMethodName("game:advance")]
+public async Task Advance(int? pieceNull = null)
+{
 
-            var game = lobby.Game;
+    
+    var lobby = _lobbyService.GetJoinedLobby(Context.ConnectionId);
+    if (lobby == null)
+        throw new HubException("You're not in a lobby");
+
+    var game = lobby.Game;
             var player = game.GetPlayer(Context.ConnectionId);
-            if (player == null)
+            if (pieceNull == null)
             {
-                throw new HubException("Player is not in lobby");
+                await NextTurn(game, lobby);
+                return;
             }
 
-            if (game.GetTurn(player) != Turn.Advance)
-            {
-                throw new HubException("Not your turn to advance your piece");
-            }
+    int piece = pieceNull.Value;
+    
 
-            game.Advance(player, piece);
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("game:advanced", player.ConnectionId, piece);
+    if (player == null)
+        throw new HubException("Player is not in lobby");
 
-            await NextTurn(game, lobby);
-        }
+    if (game.GetTurn(player) != Turn.Advance)
+        throw new HubException("Not your turn to advance your piece");
+
+    // Perform move
+    var result = game.Advance(player, piece);
+
+    // Announce movement
+    await Clients.Group($"lobby-{lobby.Id}")
+        .SendAsync("game:advanced",
+            player.ConnectionId,
+            player.Name,
+            result.PieceIndex,
+            result.From,
+            result.To
+        );
+
+    // Announce kicks
+    foreach (var (kickedPlayer, kickedPieceIndex) in result.Kicked)
+    {
+        await Clients.Group($"lobby-{lobby.Id}")
+            .SendAsync("game:piece-kicked",
+                kickedPlayer.ConnectionId,
+                kickedPlayer.Name,
+                kickedPieceIndex);
+    }
+
+    // Check win condition
+    if (game.HasWon(player))
+    {
+        await Clients.Group($"lobby-{lobby.Id}")
+            .SendAsync("game:won", player.ConnectionId, player.Name);
+        return;
+    }
+
+    await NextTurn(game, lobby);
+}
 
         private async Task NextTurn(IGameService game, ILobby lobby)
         {
             var player = game.NextTurn();
             var turn = game.GetTurn(player);
-
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("game:next-turn", player.ConnectionId, turn.ToString());
+            Console.WriteLine($"Next turn: {player.ConnectionId}, action: {turn}");
+            
+            await Clients.Group($"lobby-{lobby.Id}").SendAsync("game:next-turn", player.ConnectionId,player.Name, turn.ToString());
         }
 
         #endregion

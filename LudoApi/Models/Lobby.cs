@@ -24,9 +24,9 @@ namespace LudoApi.Models
 
         public IEnumerable<IPlayer> Players { get; private set; } = new List<IPlayer>();
 
-        public void AddPlayer(string connectionId, Color color)
+        public void AddPlayer(string connectionId, Color color, string name)
         {
-            Players = Players.Append(new Player(connectionId, color)).ToList();
+            Players = Players.Append(new Player(connectionId, color, name)).ToList();
         }
 
         public void RemovePlayer(string connectionId)

@@ -6,43 +6,51 @@ API for a game of Ludo
 
 ### Library
 
-You need the following package to use this API.
+# Ludo API - SignalR Hub Documentation
 
-`npm install @aspnet/signalr@next`
+## Lobby Methods
 
-### Connecting
+| Hub Method            | Parameters                        | Description                                         |
+|-----------------------|----------------------------------|---------------------------------------------------|
+| `lobby:create`        | `lobbyName: string, playerName: string` | Creates a new lobby and joins the player.        |
+| `lobby:join`          | `lobbyName: string, playerName?: string` | Joins an existing lobby with optional name.      |
+| `lobby:leave`         | _none_                            | Leaves the current lobby.                         |
+| `lobby:ready`         | `ready: bool`                     | Sets the player as ready/not ready.              |
+| `lobby:get-lobbies`   | _none_                            | Returns a list of all lobby names.               |
+| `lobby:get-players`   | `lobbyName: string`               | Returns list of player names in the lobby.       |
+| `lobby:exists`        | `lobbyName: string`               | Checks if a lobby exists, returns `bool`.        |
 
-The API is live on `ludo.azurewebsites.net`
+### Lobby Events (Server → Client)
 
-Connect on subpath `/game`
+- `lobby:player-join` → `(playerId, playerName)`  
+- `lobby:player-leave` → `(playerName)`  
+- `lobby:player-ready` → `(playerId, playerName)`  
+- `lobby:players` → `(List<string>)`
 
-### Events
+---
 
-#### Lobbies
+## Game Methods
 
-- invoke `lobby:create` with `lobbyName` to create a new lobby
-- invoke `lobby:join` with `lobbyName` to join a created lobby
-- invoke `lobby:leave` to leave your currently joined lobby
-- invoke `lobby:ready` to inform your mates you're ready to roll
-- invoke `lobby:get-players` with `lobbyName` to get the players in said lobby
-- invoke `lobby:get-lobbies` to get the lobbies names
-- invoke `lobby:exists` with `lobbyName` to check whether a lobby with that name already exists
+| Hub Method            | Parameters        | Description                                          |
+|-----------------------|-----------------|----------------------------------------------------|
+| `game:start`          | _none_          | Starts the game (admin only, all players ready).   |
+| `game:roll-die`       | _none_          | Rolls a die for the current player; returns possible moves. |
+| `game:advance`        | `piece?: int`    | Moves a piece. If `null`, skips turn if no valid moves. |
 
-When you're in a lobby you can get events for said lobby
+### Game Events (Server → Client)
 
-- on `lobby:player-join` it returns the user details of the player that joined
-- on `lobby:player-leave` it returns the user identifier for the player that left
-- on `lobby:player-ready` it returns the player identifier of the player who is ready to start the game
+- `game:started` → _none_  
+- `game:die-roll` → `(playerId, playerName, roll, possibleMoves)`  
+- `game:advanced` → `(playerId, playerName, pieceIndex, from, to)`  
+- `game:piece-kicked` → `(playerId, playerName, pieceIndex)`  
+- `game:next-turn` → `(playerId, playerName, turnAction)`  
+- `game:won` → `(playerId, playerName)`  
 
-#### Game
+---
 
-- invoke `game:start` as admin (those who created the lobby) to start the game when everyone is ready
-- invoke `game:roll-die` to roll your dice if it's your turn
-- invoke `game:advance` with `pieceIndex` to move the piece
+### Notes
 
-When you're in a started game you can get events for that game
-
-- on `game:started` the game has started
-- on `game:die-roll` a player has rolled the dice, it returns the player identifier of the player who rolled the die and the amount it rolled
-- on `game:advanced` a player has advanced his piece, it returns the player identifier of the player who advanced his piece and the index of said piece
-- on `game:next-turn` the next player or turn starts, it returns the player identifier of the player whose turn it is and the turn type (roll or advance)
+- **TurnAction**: `"Roll"` or `"Advance"`  
+- **possibleMoves** in `game:die-roll` includes `{pieceIndex, from, to, toFinish}`  
+- Only the **current turn player** can call `roll-die` or `advance`  
+- Calling `advance` without a piece is allowed if no valid moves exist

@@ -21,36 +21,142 @@ namespace LudoApi.Services
             _playerTurnAction = Turn.Roll;
         }
 
+       public IEnumerable<PossibleMove> GetPossibleMoves(Player player, int dieRoll)
+{
+    var moves = new List<PossibleMove>();
+
+    int boardSize = 40;      // total squares on main track
+    int startIndex = ColorPositions.StartPosition(player.Color);
+    var finishPositions = ColorPositions.WinPositions(player.Color).ToList();
+
+    for (int i = 0; i < player.Pieces.Count(); i++)
+    {
+        int pos = player.Pieces.ElementAt(i);
+
+        // 1. Pawn in base
+        if (pos == -1)
+        {
+            if (dieRoll == 6 && !player.Pieces.Contains(startIndex))
+            {
+                moves.Add(new PossibleMove
+                {
+                    PieceIndex = i,
+                    From = pos,
+                    To = startIndex
+                });
+            }
+            continue;
+        }
+
+        // 2. Pawn on main track
+        if (pos < boardSize)
+        {
+            int stepsToFinishEntry = (startIndex + boardSize - 1 - pos + boardSize) % boardSize + 1;
+
+            if (dieRoll > stepsToFinishEntry)
+            {
+                int finishIndex = dieRoll - stepsToFinishEntry - 1;
+                if (finishIndex < finishPositions.Count && !player.Pieces.Contains(finishPositions[finishIndex]))
+                {
+                    moves.Add(new PossibleMove
+                    {
+                        PieceIndex = i,
+                        From = pos,
+                        To = finishPositions[finishIndex],
+                        ToFinish = true
+                    });
+                }
+            }
+            else
+            {
+                int target = (pos + dieRoll) % boardSize;
+                if (!player.Pieces.Contains(target))
+                {
+                    moves.Add(new PossibleMove
+                    {
+                        PieceIndex = i,
+                        From = pos,
+                        To = target
+                    });
+                }
+            }
+            continue;
+        }
+
+        // 3. Pawn in finish line
+        int currentFinishIndex = finishPositions.IndexOf(pos);
+        if (currentFinishIndex >= 0 && currentFinishIndex + dieRoll < finishPositions.Count &&
+            !player.Pieces.Contains(finishPositions[currentFinishIndex + dieRoll]))
+        {
+            moves.Add(new PossibleMove
+            {
+                PieceIndex = i,
+                From = pos,
+                To = finishPositions[currentFinishIndex + dieRoll],
+                ToFinish = true
+            });
+        }
+    }
+
+    return moves;
+}
+
+
         public int RollDie(IPlayer player)
         {
-            return player.PreviousDieRoll = Random.Next(1, 6);
+            return player.PreviousDieRoll = Random.Next(1, 7);
         }
 
-        public void Advance(IPlayer player, int pieceIndex)
+        public AdvanceResult Advance(IPlayer player, int pieceIndex)
         {
-            player.Pieces = player.Pieces
-                .Select((pieceLocation, index) =>
+            var result = new AdvanceResult { PieceIndex = pieceIndex };
+
+            var pieces = player.Pieces.ToArray();
+            int from = pieces[pieceIndex];
+            int die = player.PreviousDieRoll;
+            result.From = from;
+
+            if (die <= 0)
+                return result;
+
+            // If in base and rolled a 6, move to start
+            if (from == -1)
+            {
+                pieces[pieceIndex] = ColorPositions.StartPosition(player.Color);
+            }
+            else
+            {
+                int next = from + die;
+                if (!ColorPositions.OutsideWinningPosition(player.Color, next))
                 {
-                    if (index == pieceIndex)
+                    pieces[pieceIndex] = next;
+                }
+            }
+
+            result.To = pieces[pieceIndex];
+            player.Pieces = pieces;
+
+            // --- Handle kicking ---
+            foreach (var opponent in _players.Where(p => p.ConnectionId != player.ConnectionId))
+            {
+                var opponentPieces = opponent.Pieces.ToArray();
+
+                for (int i = 0; i < opponentPieces.Length; i++)
+                {
+                    // Only kick on main track (not finish)
+                    if (opponentPieces[i] == result.To && opponentPieces[i] < ColorPositions.BoardSize)
                     {
-                        if (pieceLocation == -1)
-                        {
-                            pieceLocation = ColorPositions.StartPosition(player.Color);
-                        }
-
-                        var nextLocation = pieceLocation + player.PreviousDieRoll;
-                        if (!ColorPositions.OutsideWinningPosition(player.Color, nextLocation))
-                        {
-                            return nextLocation;
-                        }
+                        opponentPieces[i] = -1; // Back to base
+                        result.Kicked.Add((opponent, i));
                     }
+                }
 
-                    return pieceLocation;
-                })
-                .ToArray();
-        }
+                opponent.Pieces = opponentPieces;
+            }
 
-        public bool HasWon(IPlayer player)
+            return result;
+        }        
+public bool HasWon(IPlayer player)
         {
             return player.Pieces.Intersect(ColorPositions.WinPositions(player.Color)).Count() == 4;
         }

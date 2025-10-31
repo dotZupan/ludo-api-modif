@@ -4,10 +4,11 @@ namespace LudoApi.Models
 {
     public class Player : IPlayer
     {
-        public Player(string connectionId, Color color)
+        public Player(string connectionId, Color color, string name)
         {
             ConnectionId = connectionId;
             Color = color;
+            Name = name;  // <-- store the friendly name
         }
 
         public bool IsReady { get; set; }
@@ -15,6 +16,8 @@ namespace LudoApi.Models
         public string ConnectionId { get; }
 
         public Color Color { get; }
+
+        public string Name { get; }  // <-- new property
 
         public int PreviousDieRoll { get; set; } = -1;
 

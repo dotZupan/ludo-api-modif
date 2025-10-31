@@ -15,7 +15,7 @@ namespace LudoApi.Models
 
         IEnumerable<IPlayer> Players { get; }
 
-        void AddPlayer(string connectionId, Color color);
+        void AddPlayer(string connectionId, Color color, string name);
 
         void RemovePlayer(string connectionId);
     }

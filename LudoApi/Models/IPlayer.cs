@@ -8,6 +8,8 @@ namespace LudoApi.Models
 
         Color Color { get; }
 
+        string Name { get; }  // <-- new property for friendly name
+
         int PreviousDieRoll { get; set; }
         
         bool IsReady { get; set; }
