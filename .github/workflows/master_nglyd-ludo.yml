@@ -28,15 +28,16 @@ jobs:
       - name: Build only LudoApi
         run: dotnet build ./LudoApi/LudoApi.csproj --configuration Release --no-restore
 
-      # ✅ 3. Publish for deployment
-      - name: Publish LudoApi
-        run: dotnet publish ./LudoApi/LudoApi.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+      # ✅ 3. Publish API to 'publish' folder
+      - name: Publish API
+        run: dotnet publish ./LudoApi/LudoApi.csproj -c Release -o ${{github.workspace}}/publish
 
+      # ✅ 4. Upload published app to artifact
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ${{github.workspace}}/publish
 
   deploy:
     runs-on: windows-latest
