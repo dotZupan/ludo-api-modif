@@ -23,8 +23,8 @@ jobs:
         with:
           dotnet-version: '8.x'
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
+      - name: Build only API
+        run: dotnet build LudoApi/LudoApi.csproj --configuration Release --no-restore
 
       - name: dotnet publish
         run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
@@ -62,4 +62,5 @@ jobs:
           app-name: 'nglyd-ludo'
           slot-name: 'Production'
           package: .
+
           
