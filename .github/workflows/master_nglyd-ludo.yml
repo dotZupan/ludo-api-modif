@@ -20,10 +20,15 @@ jobs:
         with:
           dotnet-version: '8.x'
 
-      # ✅ Build ONLY the API project, ignore tests
+      # ✅ 1. Restore NuGet packages
+      - name: Restore dependencies
+        run: dotnet restore ./LudoApi/LudoApi.csproj
+
+      # ✅ 2. Build ONLY the API project (ignore tests)
       - name: Build only LudoApi
         run: dotnet build ./LudoApi/LudoApi.csproj --configuration Release --no-restore
 
+      # ✅ 3. Publish for deployment
       - name: Publish LudoApi
         run: dotnet publish ./LudoApi/LudoApi.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
