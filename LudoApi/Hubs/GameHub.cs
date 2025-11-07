@@ -146,7 +146,7 @@ public async Task GetPlayers(string lobbyName)
     // Build a list of player DTOs (id, name, color)
     var players = lobby.Players.Select(p => new
     {
-        id = p.Id,
+        id = p.ConnectionId,
         name = p.Name,
         color = (int)p.Color
     }).ToList();
