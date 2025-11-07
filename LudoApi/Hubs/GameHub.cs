@@ -111,7 +111,7 @@ namespace LudoApi.Hubs
             lobby.RemovePlayer(Context.ConnectionId);
 
             // Notify other clients using the friendly name
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-leave", playerName);
+            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-leave", playerName, Context.ConnectionId);
 
             // Remove from SignalR group
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"lobby-{lobby.Id}");
@@ -136,18 +136,23 @@ namespace LudoApi.Hubs
             return _lobbyService.GetLobby(lobbyName) != null;
         }
 
-        [HubMethodName("lobby:get-players")]
+ [HubMethodName("lobby:get-players")]
 public async Task GetPlayers(string lobbyName)
 {
     var lobby = _lobbyService.GetLobby(lobbyName);
     if (lobby == null)
         throw new HubException($"Lobby '{lobbyName}' does not exist");
 
-    // Extract player names from the lobby
-    var playerNames = lobby.Players.Select(p => p.Name).ToList();
+    // Build a list of player DTOs (id, name, color)
+    var players = lobby.Players.Select(p => new
+    {
+        id = p.Id,
+        name = p.Name,
+        color = (int)p.Color
+    }).ToList();
 
-    // Send the list of names to the caller
-    await Clients.Caller.SendAsync("lobby:players", playerNames);
+    // Send the list of player objects to the caller
+    await Clients.Caller.SendAsync("lobby:players", players);
 }
         #endregion
 
