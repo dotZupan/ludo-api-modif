@@ -25,7 +25,8 @@ namespace LudoApi.Services
 
         public static bool OutsideWinningPosition(Color color, int pieceLocation)
         {
-            return WinPositions(color).Any(position => pieceLocation > position);
+            var maxWinPos = WinPositions(color).Max(); // get the highest winning position
+            return pieceLocation > maxWinPos; 
         }
 
         public static IEnumerable<int> WinPositions(Color color)
