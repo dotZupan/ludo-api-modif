@@ -88,10 +88,10 @@ namespace LudoApi.Hubs
                 throw new HubException("Lobby is full");
             }
 
-            lobby.AddPlayer(Context.ConnectionId, (Color)(playerCount + 1), playerName);
+            lobby.AddPlayer(Context.ConnectionId, (Color)(playerCount), playerName);
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby-{lobby.Id}", Context.ConnectionAborted);
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-join", Context.ConnectionId, playerName);
+            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-join", Context.ConnectionId, playerName, (Color)(playerCount));
         }
 
         [HubMethodName("lobby:leave")]
