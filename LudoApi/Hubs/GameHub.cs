@@ -87,11 +87,18 @@ namespace LudoApi.Hubs
             {
                 throw new HubException("Lobby is full");
             }
+            var allColors = new List<Color> { Color.Red, Color.Blue, Color.Yellow, Color.Green };
 
-            lobby.AddPlayer(Context.ConnectionId, (Color)(playerCount), playerName);
+            // Colors already taken
+            var takenColors = lobby.Players.Select(p => p.Color).ToHashSet();
+        
+            // Pick first available color
+            var playerColor = allColors.First(c => !takenColors.Contains(c));
+        
+            lobby.AddPlayer(Context.ConnectionId, playerColor, playerName);
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby-{lobby.Id}", Context.ConnectionAborted);
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-join", Context.ConnectionId, playerName, (Color)(playerCount));
+            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-join", Context.ConnectionId, playerName, playerColor);
         }
 
         [HubMethodName("lobby:leave")]
