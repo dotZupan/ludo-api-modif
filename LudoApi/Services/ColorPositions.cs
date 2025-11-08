@@ -41,10 +41,27 @@ namespace LudoApi.Services
             return (StartPosition(color) + BoardSize - 1) % BoardSize;
         }
 
+                // First index in the finish line
+        public static int FinishStart(Color color)
+        {
+            return StartPosition(color) + BoardSize;
+        }
+
+        public static bool IsInFinishLine(Color color, int from) {
+            int finishStart = FinishStart(color);
+            int finishEnd = finishStart + WinningSpots - 1;
+
+            if (from >= finishStart && from <= finishEnd)
+                return true;
+        }
+
         public static bool IsEnteringFinish(Color color, int from, int to)
         {
             int entry = HomeEntry(color);
 
+            // not entering, already there
+            if (IsInFinishLine(color, from)
+                return false;
             // Normal case: move crosses the entry
             if (from <= entry && to > entry)
                 return true;
@@ -56,10 +73,5 @@ namespace LudoApi.Services
             return false;
         }
 
-        // First index in the finish line
-        public static int FinishStart(Color color)
-        {
-            return StartPosition(color) + BoardSize;
-        }
     }
 }
