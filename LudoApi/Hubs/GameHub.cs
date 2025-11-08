@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using LudoApi.Models;
 using LudoApi.Services;
 using Microsoft.AspNetCore.SignalR;
+using System.Collections.Generic;
 
 namespace LudoApi.Hubs
 {
