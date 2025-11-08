@@ -182,6 +182,8 @@ public async Task GetPlayers(string lobbyName)
             await Clients.Group($"lobby-{lobby.Id}").SendAsync("game:started");
             Console.WriteLine($"Game started");
 
+            await NextTurn(lobby.Game, lobby);
+
         }
 
         [HubMethodName("game:roll-die")]
