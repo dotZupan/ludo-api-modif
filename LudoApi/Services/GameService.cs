@@ -18,7 +18,7 @@ namespace LudoApi.Services
         public void StartGame(IEnumerable<IPlayer> players)
         {
             _players = players;
-            _playerTurnAction = Turn.Roll;
+            _playerTurnAction = Turn.None;
         }
 
        public IEnumerable<PossibleMove> GetPossibleMoves(Player player, int dieRoll)
