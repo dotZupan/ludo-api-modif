@@ -127,7 +127,20 @@ namespace LudoApi.Services
             else
             {
                 int next = from + die;
-                if (!ColorPositions.OutsideWinningPosition(player.Color, next))
+
+                // Main board wrap
+                if (next >= ColorPositions.BoardSize)
+                {
+                    next -= ColorPositions.BoardSize; // wrap back to 0
+                }
+                
+                // Check if piece enters finish line
+                if (ColorPositions.IsEnteringFinish(player.Color, from, next))
+                {
+                    int stepsIntoFinish = next - ColorPositions.HomeEntry(player.Color);
+                    pieces[pieceIndex] = ColorPositions.FinishStart(player.Color) + stepsIntoFinish;
+                }
+                else
                 {
                     pieces[pieceIndex] = next;
                 }
