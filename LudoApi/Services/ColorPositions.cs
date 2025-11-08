@@ -61,7 +61,7 @@ namespace LudoApi.Services
             int entry = HomeEntry(color);
 
             // not entering, already there
-            if (IsInFinishLine(color, from)
+            if (IsInFinishLine(color, from))
                 return false;
             // Normal case: move crosses the entry
             if (from <= entry && to > entry)
