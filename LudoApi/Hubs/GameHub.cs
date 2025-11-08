@@ -26,6 +26,12 @@ namespace LudoApi.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
+        [HubMethodName("connection:get-id")]
+        public string GetConnectionId()
+        {
+            return Context.ConnectionId;
+        }
+
         #region lobby
 
         [HubMethodName("lobby:create")]
