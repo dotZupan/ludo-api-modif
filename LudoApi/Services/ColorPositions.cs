@@ -53,6 +53,7 @@ namespace LudoApi.Services
 
             if (from >= finishStart && from <= finishEnd)
                 return true;
+            return false;
         }
 
         public static bool IsEnteringFinish(Color color, int from, int to)
