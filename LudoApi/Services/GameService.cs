@@ -127,12 +127,6 @@ namespace LudoApi.Services
             else
             {
                 int next = from + die;
-
-                // Main board wrap
-                if (next >= ColorPositions.BoardSize)
-                {
-                    next -= ColorPositions.BoardSize; // wrap back to 0
-                }
                 
                 // Check if piece enters finish line
                 if (ColorPositions.IsEnteringFinish(player.Color, from, next))
@@ -142,6 +136,11 @@ namespace LudoApi.Services
                 }
                 else
                 {
+                    // Main board wrap
+                    if (next >= ColorPositions.BoardSize)
+                    {
+                        next -= ColorPositions.BoardSize; // wrap back to 0
+                    }
                     pieces[pieceIndex] = next;
                 }
             }
