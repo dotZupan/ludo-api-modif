@@ -25,17 +25,18 @@ namespace LudoApi.Services
 {
     var moves = new List<PossibleMove>();
 
-    int boardSize = 40;      // total squares on main track
-    int startIndex = ColorPositions.StartPosition(player.Color);
-    var finishPositions = ColorPositions.WinPositions(player.Color).ToList();
+    int boardSize = ColorPositions.BoardSize; // 40
+    int startIndex = ColorPositions.StartPosition(player.Color); // where a piece from base appears
+    var finishPositions = ColorPositions.WinPositions(player.Color).ToList(); // e.g. [40,41,42,43]
 
     for (int i = 0; i < player.Pieces.Count(); i++)
     {
         int pos = player.Pieces.ElementAt(i);
 
-        // 1. Pawn in base
+        // 1) Pawn in base
         if (pos == -1)
         {
+            // can only leave base on a 6 and only if your own piece is not already on the start tile
             if (dieRoll == 6 && !player.Pieces.Contains(startIndex))
             {
                 moves.Add(new PossibleMove
@@ -48,58 +49,72 @@ namespace LudoApi.Services
             continue;
         }
 
-        // 2. Pawn on main track
-        if (pos < boardSize)
+        // 2) Pawn already in finish line (positions >= boardSize)
+        if (pos >= boardSize)
         {
-            int stepsToFinishEntry = (startIndex + boardSize - 1 - pos + boardSize) % boardSize + 1;
-
-            if (dieRoll > stepsToFinishEntry)
+            var currentFinishIndex = finishPositions.IndexOf(pos);
+            if (currentFinishIndex >= 0)
             {
-                int finishIndex = dieRoll - stepsToFinishEntry - 1;
-                if (finishIndex < finishPositions.Count && !player.Pieces.Contains(finishPositions[finishIndex]))
+                int targetIdx = currentFinishIndex + dieRoll;
+                // must not overshoot win positions and must not land on your own piece
+                if (targetIdx < finishPositions.Count && !player.Pieces.Contains(finishPositions[targetIdx]))
                 {
                     moves.Add(new PossibleMove
                     {
                         PieceIndex = i,
                         From = pos,
-                        To = finishPositions[finishIndex],
+                        To = finishPositions[targetIdx],
                         ToFinish = true
-                    });
-                }
-            }
-            else
-            {
-                int target = (pos + dieRoll) % boardSize;
-                if (!player.Pieces.Contains(target))
-                {
-                    moves.Add(new PossibleMove
-                    {
-                        PieceIndex = i,
-                        From = pos,
-                        To = target
                     });
                 }
             }
             continue;
         }
 
-        // 3. Pawn in finish line
-        int currentFinishIndex = finishPositions.IndexOf(pos);
-        if (currentFinishIndex >= 0 && currentFinishIndex + dieRoll < finishPositions.Count &&
-            !player.Pieces.Contains(finishPositions[currentFinishIndex + dieRoll]))
+        // 3) Pawn on main track (0..boardSize-1)
+        // compute distance (in steps) from current pos to the home entry (0..boardSize-1)
+        int entry = ColorPositions.HomeEntry(player.Color);
+        int distanceToEntry = (entry - pos + boardSize) % boardSize;
+
+        // If dieRoll > distanceToEntry -> we enter finish (maybe), compute steps into finish
+        if (dieRoll > distanceToEntry)
         {
-            moves.Add(new PossibleMove
+            int stepsIntoFinish = dieRoll - distanceToEntry - 1; // 0 means first finish slot
+            if (stepsIntoFinish < finishPositions.Count)
             {
-                PieceIndex = i,
-                From = pos,
-                To = finishPositions[currentFinishIndex + dieRoll],
-                ToFinish = true
-            });
+                int finishPos = finishPositions[stepsIntoFinish];
+                if (!player.Pieces.Contains(finishPos))
+                {
+                    moves.Add(new PossibleMove
+                    {
+                        PieceIndex = i,
+                        From = pos,
+                        To = finishPos,
+                        ToFinish = true
+                    });
+                }
+            }
+            // else overshoots finish => no legal move
+        }
+        else
+        {
+            // Normal main-track move with wrap-around
+            int target = (pos + dieRoll) % boardSize;
+            if (!player.Pieces.Contains(target))
+            {
+                moves.Add(new PossibleMove
+                {
+                    PieceIndex = i,
+                    From = pos,
+                    To = target
+                });
+            }
         }
     }
 
     return moves;
 }
+
 
 
         public int RollDie(IPlayer player)
