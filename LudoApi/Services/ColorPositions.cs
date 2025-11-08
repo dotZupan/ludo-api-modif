@@ -33,5 +33,33 @@ namespace LudoApi.Services
         {
             return Enumerable.Range(StartPosition(color) + BoardSize, WinningSpots);
         }
+
+        // --- New Method ---
+        public static int HomeEntry(Color color)
+        {
+            // the last square before entering the finish
+            return (StartPosition(color) + BoardSize - 1) % BoardSize;
+        }
+
+        public static bool IsEnteringFinish(Color color, int from, int to)
+        {
+            int entry = HomeEntry(color);
+
+            // Normal case: move crosses the entry
+            if (from <= entry && to > entry)
+                return true;
+
+            // Wrap-around case
+            if (from > entry && (to % BoardSize) <= entry)
+                return true;
+
+            return false;
+        }
+
+        // First index in the finish line
+        public static int FinishStart(Color color)
+        {
+            return StartPosition(color) + BoardSize;
+        }
     }
 }
