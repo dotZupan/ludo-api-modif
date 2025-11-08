@@ -130,14 +130,17 @@ namespace LudoApi.Services
                 if (ColorPositions.IsInFinishLine(player.Color, from))
                 {
                     // Already in finish, just advance within finish when not outside winning positions
-                    if (!ColorPositions.OutsideWinningPosition(player.Color, from))
-                        pieces[pieceIndex] = from + die;
+                    if (!ColorPositions.OutsideWinningPosition(player.Color, next))
+                        pieces[pieceIndex] = next;
                 }
                 // Check if piece enters finish line
                 else if (ColorPositions.IsEnteringFinish(player.Color, from, next))
                 {
-                    int stepsIntoFinish = next - ColorPositions.HomeEntry(player.Color);
-                    pieces[pieceIndex] = ColorPositions.FinishStart(player.Color) + stepsIntoFinish;
+                    
+                        int stepsIntoFinish = next - ColorPositions.HomeEntry(player.Color);
+                        next = ColorPositions.FinishStart(player.Color) + stepsIntoFinish - 1;
+                        if (!ColorPositions.OutsideWinningPosition(player.Color, next))
+                            pieces[pieceIndex] = next;
                 }
                 else
                 {
