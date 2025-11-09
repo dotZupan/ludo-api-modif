@@ -68,8 +68,8 @@ namespace LudoApi.Services
                 return true;
 
             // Wrap-around case
-            if (from > entry && (to % BoardSize) <= entry)
-                return true;
+           // if (from > entry && (to % BoardSize) <= entry)
+             //   return true;
 
             return false;
         }
