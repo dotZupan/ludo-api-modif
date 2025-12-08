@@ -31,6 +31,7 @@ namespace LudoApi.Models
 
         public void RemovePlayer(string connectionId)
         {
+            Game.RemovePlayer(connectionId);
             Players = Players.Where(player => player.ConnectionId != connectionId).ToList();
         }
     }
