@@ -20,5 +20,7 @@ namespace LudoApi.Services
         bool HasWon(IPlayer player);
 
         IEnumerable<PossibleMove> GetPossibleMoves(Player player, int dieRoll);
+
+        void RemovePlayer(string connectionId);
     }
 }
