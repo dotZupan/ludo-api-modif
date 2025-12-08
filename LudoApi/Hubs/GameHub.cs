@@ -117,6 +117,14 @@ namespace LudoApi.Hubs
                 throw new HubException("Player is not in a lobby");
             }
 
+            var game = lobby.Game;
+            var playersList = lobby.Players.ToList();
+
+            var currentOnTurn = playersList.FirstOrDefault(p => game.GetTurn(p) != Turn.None);
+
+            bool wasOnTurn = currentOnTurn != null && currentOnTurn.ConnectionId == Context.ConnectionId;
+            
+
             // Get the player object before removing
             var player = lobby.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
             string playerName = player?.Name ?? Context.ConnectionId;
@@ -134,6 +142,11 @@ namespace LudoApi.Hubs
             if (!lobby.Players.Any())
             {
                 _lobbyService.DestroyLobby(lobby.Id);
+            }
+
+            if (wasOnTurn)
+            {
+                await NextTurn(lobby.Game, lobby);
             }
         }
 
