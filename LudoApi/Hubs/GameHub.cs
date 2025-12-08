@@ -116,36 +116,58 @@ namespace LudoApi.Hubs
             {
                 throw new HubException("Player is not in a lobby");
             }
-
+        
             var game = lobby.Game;
             var playersList = lobby.Players.ToList();
+        
 
             var currentOnTurn = playersList.FirstOrDefault(p => game.GetTurn(p) != Turn.None);
-
             bool wasOnTurn = currentOnTurn != null && currentOnTurn.ConnectionId == Context.ConnectionId;
-            
+        
 
-            // Get the player object before removing
-            var player = lobby.Players.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+            var player = playersList.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
             string playerName = player?.Name ?? Context.ConnectionId;
-
-            // Remove the player from the lobby
+        
+        
+            
             lobby.RemovePlayer(Context.ConnectionId);
-
-            // Notify other clients using the friendly name
-            await Clients.Group($"lobby-{lobby.Id}").SendAsync("lobby:player-leave", playerName, Context.ConnectionId);
-
-            // Remove from SignalR group
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"lobby-{lobby.Id}");
-
-            // Destroy lobby if empty
+        
+            
             if (!lobby.Players.Any())
             {
+        
+                try
+                {
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"lobby-{lobby.Id}");
+                }
+                catch { }
+        
                 _lobbyService.DestroyLobby(lobby.Id);
+                return; 
             }
-
+        
+            try
+            {
+                await Clients.Group($"lobby-{lobby.Id}")
+                    .SendAsync("lobby:player-leave", playerName, Context.ConnectionId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARN] Failed to notify group: {ex.Message}");
+            }
+        
+            try
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"lobby-{lobby.Id}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARN] Failed removing from group: {ex.Message}");
+            }
+        
             if (wasOnTurn)
             {
+                Console.WriteLine("[LeaveLobby] Player was on turn → calling NextTurn()");
                 await NextTurn(lobby.Game, lobby);
             }
         }
