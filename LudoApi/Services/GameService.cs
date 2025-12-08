@@ -18,8 +18,62 @@ namespace LudoApi.Services
         public void StartGame(IEnumerable<IPlayer> players)
         {
             _players = players;
+            _playerTurn = 0;
             _playerTurnAction = Turn.None;
         }
+
+        public void RemovePlayer(string connectionId)
+    {
+        var list = _players.ToList();
+        if (!list.Any())
+            return;
+
+        // Kto je aktuálne na ťahu (pred zmenou)
+        var currentPlayer = list[_playerTurn];
+        bool removedIsCurrent = currentPlayer.ConnectionId == connectionId;
+
+        // Index hráča na odstránenie
+        var index = list.FindIndex(p => p.ConnectionId == connectionId);
+        if (index == -1)
+            return;
+
+        Console.WriteLine($"[GameService] Removing player {connectionId} from game turn order.");
+
+        list.RemoveAt(index);
+
+        if (!list.Any())
+        {
+            // Zostala prázdna hra
+            _players = list;
+            _playerTurn = 0;
+            _playerTurnAction = Turn.None;
+            Console.WriteLine("[GameService] No players left in game.");
+            return;
+        }
+
+        // Uprav index, aby stále ukazoval na „správneho“ hráča
+        if (_playerTurn > index)
+        {
+            _playerTurn--;
+        }
+
+        if (_playerTurn >= list.Count)
+        {
+            // wrap-around
+            _playerTurn = 0;
+        }
+
+        _players = list;
+
+        if (removedIsCurrent)
+        {
+            // Hráč na ťahu odišiel → ďalší hráč začne od Turn.Roll
+            _playerTurnAction = Turn.None;
+        }
+
+        Console.WriteLine($"[GameService] Players after removal: {string.Join(", ", _players.Select(p => p.ConnectionId))}");
+        Console.WriteLine($"[GameService] Current index: {_playerTurn}, action: {_playerTurnAction}");
+    }
 
        public IEnumerable<PossibleMove> GetPossibleMoves(Player player, int dieRoll)
 {
