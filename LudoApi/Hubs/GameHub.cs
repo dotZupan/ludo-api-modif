@@ -197,7 +197,7 @@ public async Task GetPlayers(string lobbyName)
     {
         id = p.ConnectionId,
         name = p.Name,
-        color = (int)p.Color
+        color = (int)p.Color,
         isReady = p.IsReady
     }).ToList();
 
