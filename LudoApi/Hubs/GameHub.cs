@@ -198,6 +198,7 @@ public async Task GetPlayers(string lobbyName)
         id = p.ConnectionId,
         name = p.Name,
         color = (int)p.Color
+        isReady = p.IsReady
     }).ToList();
 
     // Send the list of player objects to the caller
